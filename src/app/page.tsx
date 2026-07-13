@@ -5,6 +5,7 @@ import BentoFeatures from "@/components/BentoFeatures";
 import StickyFeatures from "@/components/StickyFeatures";
 import FeatureGridFAQ from "@/components/FeatureGridFAQ";
 import Pricing from "@/components/Pricing";
+import Contact from '@/components/Contact';
 import Footer from "@/components/Footer";
 
 export default function Home() {
@@ -38,6 +39,7 @@ export default function Home() {
         </div>
       </section>
 
+      <Contact />
       <Footer />
     </main>
   );

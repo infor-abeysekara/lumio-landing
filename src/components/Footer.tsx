@@ -20,11 +20,19 @@ export default function Footer() {
             </ul>
           </div>
           <div>
-            <h4 className="font-semibold mb-4 text-white">Contact</h4>
-            <ul className="space-y-2 text-sm text-gray-400">
-              <li>Support</li>
-              <li>Sales</li>
-              <li>Privacy Policy</li>
+            <h4 className="font-semibold mb-4 text-white">Contact Us</h4>
+            <ul className="space-y-3 text-sm text-gray-400">
+              <li className="leading-relaxed">
+                Lumnix Solutions<br />
+                No.615, Yaya 01, Wewa Pahala,<br />
+                Sooriyawewa.
+              </li>
+              <li>
+                <a href="tel:+94703101272" className="hover:text-brand-blue transition-colors">+9470 310 1272</a>
+              </li>
+              <li>
+                <a href="mailto:info@lumiopos.store" className="hover:text-brand-blue transition-colors">info@lumiopos.store</a>
+              </li>
             </ul>
           </div>
         </div>
