@@ -20,7 +20,13 @@ export default function Navbar() {
         <a href="#pricing" className="hover:text-brand-blue transition-colors">Pricing</a>
       </div>
 
-      <div>
+      <div className="flex items-center gap-3">
+        <a 
+          href="/download" 
+          className="text-brand-dark px-4 py-2.5 rounded-full text-sm font-medium hover:bg-gray-100 transition-all duration-300 hidden sm:inline-block border border-gray-200"
+        >
+          Download Software
+        </a>
         <a 
           href="http://localhost/Lumio POS Publish/login.php" 
           className="bg-brand-dark text-white px-5 py-2.5 rounded-full text-sm font-medium hover:bg-brand-blue transition-all duration-300 shadow-md hover:shadow-xl hover:-translate-y-0.5 inline-block"

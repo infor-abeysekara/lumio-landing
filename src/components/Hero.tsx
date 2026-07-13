@@ -41,14 +41,20 @@ export default function Hero() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.4 }}
-          className="flex items-center justify-center gap-4 mb-20"
+          className="flex flex-col items-center justify-center gap-4 mb-20"
         >
-          <a href="#demo" className="bg-brand-blue text-white px-8 py-4 rounded-full text-lg font-medium hover:bg-blue-700 transition-all shadow-lg hover:shadow-blue-500/25 hover:-translate-y-1">
-            Get Started
-          </a>
-          <a href="#features" className="text-brand-dark px-8 py-4 rounded-full text-lg font-medium hover:bg-gray-100 transition-all">
-            See Features
-          </a>
+          <div className="flex items-center gap-4">
+            <a href="#pricing" className="bg-brand-blue text-white px-8 py-4 rounded-full text-lg font-medium hover:bg-blue-700 transition-all shadow-lg hover:shadow-blue-500/25 hover:-translate-y-1">
+              Get Started
+            </a>
+            <a href="#features" className="text-brand-dark px-8 py-4 rounded-full text-lg font-medium hover:bg-gray-100 transition-all">
+              See Features
+            </a>
+          </div>
+          <p className="mt-2 text-sm md:text-base font-medium text-brand-gray flex items-center justify-center gap-2">
+            <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+            Start with a 30-Day Free Trial • No Credit Card Required
+          </p>
         </motion.div>
 
         <motion.div 

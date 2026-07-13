@@ -29,10 +29,11 @@ export default function Home() {
             </p>
             <a 
               href="http://localhost/Lumio POS Publish/login.php" 
-              className="bg-brand-blue text-white px-8 py-4 rounded-full text-lg font-medium hover:bg-blue-700 transition-all shadow-lg hover:shadow-blue-500/25 hover:-translate-y-1 inline-block"
+              className="bg-brand-blue text-white px-8 py-4 rounded-full text-lg font-medium hover:bg-blue-700 transition-all shadow-lg hover:shadow-blue-500/25 hover:-translate-y-1 inline-block mb-4"
             >
-              Go to Dashboard
+              Start Your 30-Day Free Trial
             </a>
+            <p className="text-sm text-brand-gray font-medium">No credit card required. Setup takes just 5 minutes.</p>
           </div>
         </div>
       </section>
