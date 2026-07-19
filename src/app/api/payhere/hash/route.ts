@@ -7,7 +7,7 @@ export async function POST(request: Request) {
     
     // Hardcoded Merchant credentials for PayHere
     const merchant_id = '1231869';
-    const merchant_secret = 'MTM1ODU3MDk4MTIwNzg2Nzk5OTAxMTcwMzUzMDIxNDE4OTU1NzY4Nw==';
+    const merchant_secret = 'MjcyNjcyODQ4OTI1MzQ3NjI1NzgzMjc4NzIwNTI2NDI2ODc3MjQwOQ==';
 
     // PayHere Hash generation logic
     const hashedSecret = crypto.createHash('md5').update(merchant_secret).digest('hex').toUpperCase();

@@ -23,7 +23,7 @@ export default function Hero() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.2 }}
-          className="text-6xl md:text-8xl font-serif text-brand-dark mb-6 leading-tight"
+          className="text-5xl sm:text-6xl md:text-8xl font-serif text-brand-dark mb-6 leading-tight"
         >
           Run On Facts,<br />Not Guesswork.
         </motion.h1>
@@ -43,15 +43,15 @@ export default function Hero() {
           transition={{ duration: 0.6, delay: 0.4 }}
           className="flex flex-col items-center justify-center gap-4 mb-20"
         >
-          <div className="flex items-center gap-4">
-            <a href="#pricing" className="bg-brand-blue text-white px-8 py-4 rounded-full text-lg font-medium hover:bg-blue-700 transition-all shadow-lg hover:shadow-blue-500/25 hover:-translate-y-1">
+          <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
+            <a href="#pricing" className="w-full sm:w-auto text-center bg-brand-blue text-white px-8 py-4 rounded-full text-lg font-medium hover:bg-blue-700 transition-all shadow-lg hover:shadow-blue-500/25 hover:-translate-y-1">
               Get Started
             </a>
-            <a href="#features" className="text-brand-dark px-8 py-4 rounded-full text-lg font-medium hover:bg-gray-100 transition-all">
+            <a href="#features" className="w-full sm:w-auto text-center text-brand-dark px-8 py-4 rounded-full text-lg font-medium hover:bg-gray-100 transition-all border border-gray-200 sm:border-transparent">
               See Features
             </a>
           </div>
-          <p className="mt-2 text-sm md:text-base font-medium text-brand-gray flex items-center justify-center gap-2">
+          <p className="mt-2 text-xs sm:text-sm md:text-base font-medium text-brand-gray flex items-center justify-center gap-2">
             <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
             Start with a 30-Day Free Trial • No Credit Card Required
           </p>
@@ -61,7 +61,7 @@ export default function Hero() {
           initial={{ opacity: 0, y: 40 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.5, ease: "easeOut" }}
-          className="relative mx-auto p-3 md:p-5 rounded-2xl bg-white/40 backdrop-blur-xl border border-white/60 shadow-[0_0_100px_rgba(96,165,250,0.4)] max-w-5xl"
+          className="relative mx-auto p-2 md:p-5 rounded-xl md:rounded-2xl bg-white/40 backdrop-blur-xl border border-white/60 shadow-[0_0_100px_rgba(96,165,250,0.4)] max-w-5xl"
         >
           <div className="bg-white border border-gray-100 shadow-sm">
             <img 

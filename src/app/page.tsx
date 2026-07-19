@@ -1,23 +1,26 @@
 import Navbar from "@/components/Navbar";
 import Hero from "@/components/Hero";
-import TrustedBy from "@/components/TrustedBy";
+import ClientFeedbacks from "@/components/ClientFeedbacks";
 import BentoFeatures from "@/components/BentoFeatures";
 import StickyFeatures from "@/components/StickyFeatures";
 import FeatureGridFAQ from "@/components/FeatureGridFAQ";
 import Pricing from "@/components/Pricing";
+import AccessoriesShop from "@/components/AccessoriesShop";
 import Contact from '@/components/Contact';
 import Footer from "@/components/Footer";
+import RequestQuote from "@/components/RequestQuote";
 
 export default function Home() {
   return (
     <main className="min-h-screen bg-white">
       <Navbar />
       <Hero />
-      <TrustedBy />
+      <ClientFeedbacks />
       <BentoFeatures />
       <StickyFeatures />
       <FeatureGridFAQ />
       <Pricing />
+      <AccessoriesShop />
       
       {/* CTA Section */}
       <section className="py-24 bg-white relative overflow-hidden">

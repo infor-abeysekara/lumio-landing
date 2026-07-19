@@ -2,49 +2,29 @@
 
 import { motion } from "framer-motion";
 import { Check, X, Plus } from "lucide-react";
-import { useState, FormEvent } from "react";
+import { useCart } from "@/context/CartContext";
 
 export default function Pricing() {
-  const [isCheckingOut, setIsCheckingOut] = useState(false);
+  const { addToCart } = useCart();
 
-  const handlePaymentSubmit = async (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setIsCheckingOut(true);
-    const form = e.currentTarget;
-    
-    // Values must exactly match the form inputs
-    const order_id = "LUMIO-ENT-001";
-    const amount = "65000.00";
-    const currency = "LKR";
+  const handleBuyNow = () => {
+    // Add the main software license
+    addToCart({
+      id: "lumio-ent-001",
+      name: "Lumio POS Enterprise License",
+      price: 65000,
+      quantity: 1,
+      type: "software",
+    });
 
-    try {
-      const res = await fetch('/api/payhere/hash', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ order_id, amount, currency })
-      });
-      
-      const data = await res.json();
-      
-      if (data.hash) {
-        let hashInput = form.querySelector('input[name="hash"]') as HTMLInputElement;
-        if (!hashInput) {
-          hashInput = document.createElement('input');
-          hashInput.type = 'hidden';
-          hashInput.name = 'hash';
-          form.appendChild(hashInput);
-        }
-        hashInput.value = data.hash;
-        form.submit();
-      } else {
-        alert("Payment initialization failed. Please try again.");
-        setIsCheckingOut(false);
-      }
-    } catch (error) {
-      console.error("Error generating hash", error);
-      alert("Payment initialization failed. Please try again.");
-      setIsCheckingOut(false);
-    }
+    // Auto-add the Cloud Dashboard as an addon
+    addToCart({
+      id: "lumio-cloud-001",
+      name: "Cloud Dashboard (1 Year)",
+      price: 6000,
+      quantity: 1,
+      type: "addon",
+    });
   };
 
   const plans = [
@@ -138,26 +118,12 @@ export default function Pricing() {
               </div>
               
               {plan.buttonText === "Buy Now" ? (
-                <form onSubmit={handlePaymentSubmit} action="https://sandbox.payhere.lk/pay/checkout" method="post" className="w-full mb-8">   
-                  <input type="hidden" name="merchant_id" value="1231869" />
-                  <input type="hidden" name="return_url" value="http://localhost:3000" />
-                  <input type="hidden" name="cancel_url" value="http://localhost:3000" />
-                  <input type="hidden" name="notify_url" value="http://localhost:3000/api/notify" />  
-                  <input type="hidden" name="order_id" value="LUMIO-ENT-001" />
-                  <input type="hidden" name="items" value="Lumio POS Enterprise License" />
-                  <input type="hidden" name="currency" value="LKR" />
-                  <input type="hidden" name="amount" value="65000.00" />  
-                  <input type="hidden" name="first_name" value="Customer" />
-                  <input type="hidden" name="last_name" value="Name" />
-                  <input type="hidden" name="email" value="customer@example.com" />
-                  <input type="hidden" name="phone" value="0700000000" />
-                  <input type="hidden" name="address" value="Sri Lanka" />
-                  <input type="hidden" name="city" value="Colombo" />
-                  <input type="hidden" name="country" value="Sri Lanka" />
-                  <button type="submit" disabled={isCheckingOut} className={`w-full py-3 rounded-full font-medium transition-all duration-300 ${plan.isPopular ? 'bg-brand-blue text-white hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-500/30' : 'bg-brand-light text-brand-dark hover:bg-gray-100 border border-gray-200 hover:border-gray-300'} disabled:opacity-70 disabled:cursor-not-allowed`}>
-                    {isCheckingOut ? "Processing..." : plan.buttonText}
-                  </button>
-                </form>
+                <button 
+                  onClick={handleBuyNow}
+                  className={`w-full py-3 rounded-full font-medium transition-all duration-300 mb-8 ${plan.isPopular ? 'bg-brand-blue text-white hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-500/30' : 'bg-brand-light text-brand-dark hover:bg-gray-100 border border-gray-200 hover:border-gray-300'}`}
+                >
+                  Add to Cart
+                </button>
               ) : (
                 <a href={plan.buttonText === "Contact Us" ? "#contact" : "http://localhost/Lumio POS Publish/login.php"} className={`block text-center w-full py-3 rounded-full font-medium transition-all duration-300 mb-8 ${plan.isPopular ? 'bg-brand-blue text-white hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-500/30' : 'bg-brand-light text-brand-dark hover:bg-gray-100 border border-gray-200 hover:border-gray-300'}`}>
                   {plan.buttonText}
@@ -183,7 +149,7 @@ export default function Pricing() {
                       </div>
                       <div className="flex flex-col">
                         <span className="text-sm font-medium text-brand-dark">{plan.addOn}</span>
-                        <span className="text-[10px] text-brand-gray font-bold uppercase tracking-wider mt-0.5">Optional Add-on</span>
+                        <span className="text-[10px] text-brand-gray font-bold uppercase tracking-wider mt-0.5">Auto-added to Cart</span>
                       </div>
                     </div>
                   </div>

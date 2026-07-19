@@ -16,9 +16,13 @@ export const metadata: Metadata = {
   title: "Lumio POS - Lightning Fast Next-Gen POS",
   description: "Run On Facts, Not Guesswork with Lumio POS.",
   icons: {
-    icon: "/images/Logo.svg",
+    icon: "/images/favicon.svg",
   },
 };
+
+import { CartProvider } from "@/context/CartContext";
+import FloatingCart from "@/components/FloatingCart";
+import CartSidebar from "@/components/CartSidebar";
 
 export default function RootLayout({
   children,
@@ -29,8 +33,15 @@ export default function RootLayout({
     <html
       lang="en"
       className={`${inter.variable} ${playfair.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col" suppressHydrationWarning>
+        <CartProvider>
+          {children}
+          <FloatingCart />
+          <CartSidebar />
+        </CartProvider>
+      </body>
     </html>
   );
 }
