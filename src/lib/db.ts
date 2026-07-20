@@ -4,7 +4,7 @@ const pool = new Pool({
   user: 'lumnixso_lumiopos_landing',
   host: 'localhost',
   database: 'lumnixso_next_lumiopos_landing',
-  password: '@Ra200400912445', // ඔයා Install කරද්දි දුන්න Password එක මෙතන දාන්න
+  password: 'lumnixso_lumiopos_landing', // ඔයා Install කරද්දි දුන්න Password එක මෙතන දාන්න
   port: 5432,
 });
 
