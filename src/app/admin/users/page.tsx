@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Trash2, Search, Filter, ShieldAlert, Shield, Users, UserCog, User } from "lucide-react";
+import { Trash2, Search, Filter, ShieldAlert, Shield, Users, UserCog, User, Eye, EyeOff } from "lucide-react";
 
 type UserData = {
   id: number;
@@ -24,6 +24,7 @@ export default function UserManagementPage() {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<UserData | null>(null);
   const [superAdminPassword, setSuperAdminPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [deleteError, setDeleteError] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -220,14 +221,23 @@ export default function UserManagementPage() {
             
             <div className="mb-6">
               <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Your Password</label>
-              <input 
-                type="password"
-                value={superAdminPassword}
-                onChange={e => setSuperAdminPassword(e.target.value)}
-                className="w-full border-2 border-gray-100 p-3 rounded-xl outline-none focus:border-red-400 transition-colors"
-                placeholder="••••••••"
-                autoFocus
-              />
+              <div className="relative">
+                <input 
+                  type={showPassword ? "text" : "password"}
+                  value={superAdminPassword}
+                  onChange={e => setSuperAdminPassword(e.target.value)}
+                  className="w-full border-2 border-gray-100 p-3 pr-10 rounded-xl outline-none focus:border-red-400 transition-colors"
+                  placeholder="••••••••"
+                  autoFocus
+                />
+                <button 
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
               {deleteError && <p className="text-red-500 text-sm font-medium mt-2 text-center">{deleteError}</p>}
             </div>
 

@@ -10,6 +10,7 @@ interface Feedback {
   shop_name: string;
   rating: number;
   feedback_text: string;
+  image_url?: string;
 }
 
 export default function ClientFeedbacks() {
@@ -63,10 +64,16 @@ export default function ClientFeedbacks() {
             >
               <div className="bg-white border border-gray-100 shadow-xl shadow-gray-200/50 rounded-2xl p-8 md:p-10 max-w-3xl mx-auto flex flex-col items-center">
                 
-                {/* Avatar Placeholder */}
-                <div className="w-20 h-20 bg-[#008f4c] rounded-full flex items-center justify-center text-white text-2xl font-bold mb-6 shadow-md shadow-[#008f4c]/30">
-                  {feedbacks[currentIndex].shop_name.substring(0, 2).toUpperCase()}
-                </div>
+                {/* Avatar / Image */}
+                {feedbacks[currentIndex].image_url ? (
+                  <div className="w-20 h-20 rounded-full overflow-hidden border border-gray-100 mb-6 shadow-md shadow-gray-200/50 bg-white flex items-center justify-center">
+                    <img src={feedbacks[currentIndex].image_url} alt={`${feedbacks[currentIndex].shop_name} logo`} className="w-full h-full object-cover" />
+                  </div>
+                ) : (
+                  <div className="w-20 h-20 bg-[#008f4c] rounded-full flex items-center justify-center text-white text-2xl font-bold mb-6 shadow-md shadow-[#008f4c]/30">
+                    {feedbacks[currentIndex].shop_name.substring(0, 2).toUpperCase()}
+                  </div>
+                )}
 
                 {/* Feedback Text */}
                 <p className="text-lg md:text-xl text-gray-600 italic mb-8 leading-relaxed font-medium">

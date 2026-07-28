@@ -1,9 +1,21 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
+import fs from 'fs';
+import path from 'path';
+
+function logWebhook(msg: string) {
+  try {
+    const logPath = path.join(process.cwd(), 'public', 'webhook_log.txt');
+    const time = new Date().toISOString();
+    fs.appendFileSync(logPath, `[${time}] ${msg}\n`);
+  } catch (e) {
+    // ignore
+  }
+}
 
 export async function POST(request: Request) {
   try {
-    // PayHere sends data as application/x-www-form-urlencoded
+    logWebhook('--- Incoming Webhook ---');
     const formData = await request.formData();
     
     const merchant_id = formData.get('merchant_id') as string;
@@ -13,34 +25,60 @@ export async function POST(request: Request) {
     const status_code = formData.get('status_code') as string;
     const md5sig = formData.get('md5sig') as string;
     
-    // We passed the Processor ID in custom_1
-    const processor_id = formData.get('custom_1') as string;
+    const custom_1 = formData.get('custom_1') as string || '';
+    const [processor_id, emailFromCustom] = custom_1.split('|');
     const has_cloud_dashboard = formData.get('custom_2') as string;
-    const customer_email = formData.get('customer_email') as string; // PayHere sometimes sends this
+    
+    const customer_email = (formData.get('customer_email') as string) || emailFromCustom;
+    logWebhook(`Order ID: ${order_id}, Email: ${customer_email}, Status: ${status_code}`);
 
-    // 1. Verify the MD5 Signature to ensure the request is actually from PayHere
-    const merchant_secret = 'MjcyNjcyODQ4OTI1MzQ3NjI1NzgzMjc4NzIwNTI2NDI2ODc3MjQwOQ==';
+    const { query } = require('@/lib/db');
+    const settingsRes = await query("SELECT setting_value FROM settings WHERE setting_key = 'payhere_secret'");
+    
+    if (settingsRes.rows.length === 0) {
+      logWebhook('Error: PayHere secret not found in DB');
+      return NextResponse.json({ error: 'Server Configuration Error' }, { status: 500 });
+    }
+    
+    const merchant_secret = settingsRes.rows[0].setting_value;
     const hashedSecret = crypto.createHash('md5').update(merchant_secret).digest('hex').toUpperCase();
     
     const stringToHash = merchant_id + order_id + payhere_amount + payhere_currency + status_code + hashedSecret;
     const generatedSignature = crypto.createHash('md5').update(stringToHash).digest('hex').toUpperCase();
 
     if (generatedSignature !== md5sig) {
-      console.error('Invalid PayHere Signature!');
+      logWebhook(`Error: Invalid Signature! Expected ${generatedSignature}, got ${md5sig}`);
       return NextResponse.json({ error: 'Invalid Signature' }, { status: 403 });
     }
 
-    // 2. Check if the payment was successful (status_code === '2')
     if (status_code === '2') {
-      console.log(`Payment Success for Order: ${order_id}. Processor ID: ${processor_id}`);
+      logWebhook(`Payment Success! Checking for pending registrations...`);
       
-      // 3. Handle based on Order Type
+      try {
+        const pendingRes = await query("SELECT * FROM pending_registrations WHERE order_id = $1", [order_id]);
+        if (pendingRes.rows.length > 0) {
+          const user = pendingRes.rows[0];
+          logWebhook(`Found pending registration for ${user.email}. Creating tenant account...`);
+          
+          await query(`
+            INSERT INTO tenants (first_name, last_name, store_name, nic, email, phone, address, password)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+          `, [user.first_name, user.last_name, user.store_name, user.nic, user.email, user.phone, user.address, user.password]);
+          
+          await query("DELETE FROM pending_registrations WHERE order_id = $1", [order_id]);
+          logWebhook(`Tenant account created successfully.`);
+        } else {
+          logWebhook(`No pending registration found for order ${order_id}.`);
+        }
+      } catch (err: any) {
+        logWebhook(`Error processing pending registration: ${err.message}`);
+      }
+
+      logWebhook(`Calling PHP API...`);
+      
       if (order_id.startsWith('LUMIO-HW-')) {
-        console.log('Hardware order paid. We should notify the shop owner via email or database!');
-        // NOTE: A real implementation would send an email here using nodemailer
-        // or insert into a "hardware_orders" table.
+        logWebhook('Hardware order - skipping license generation');
       } else {
-        // Software License Order - Send secure POST request to PHP Admin Portal
         const phpAdminUrl = 'https://lumiopos.lumnixsolutions.site/generate_license.php';
         const SHARED_API_SECRET = 'lumio_secure_api_key_2026_xyz'; 
 
@@ -61,44 +99,39 @@ export async function POST(request: Request) {
           });
 
           if (!phpResponse.ok) {
-            console.error('Failed to communicate with PHP Admin Portal');
+            logWebhook(`PHP API failed with status: ${phpResponse.status}`);
           } else {
-            console.log('Successfully triggered License Generation on PHP Admin Portal');
+            const data = await phpResponse.json();
+            logWebhook(`PHP API Success. Returned data: ${JSON.stringify(data)}`);
             
-            try {
-              const data = await phpResponse.json();
-              if (data.license_key) {
-                // If the PHP script returns the generated license key, send the email
-                const { sendLicenseEmail } = await import('@/lib/email');
-                const customer_first_name = formData.get('custom_1') as string; // Ideally pass the name from checkout
-                await sendLicenseEmail(
-                  customer_email,
-                  'Valued Customer', // You can pass the actual name via a custom field if you want
-                  order_id,
-                  payhere_amount,
-                  data.license_key
-                );
-                console.log('License email sent successfully to', customer_email);
-              } else {
-                console.log('No license key returned by PHP script, skipping email.');
-              }
-            } catch (e) {
-              console.error('Failed to parse PHP response or send email', e);
+            if (data.license_key) {
+              const { sendLicenseEmail } = await import('@/lib/email');
+              logWebhook(`Attempting to send email to ${customer_email}...`);
+              const sent = await sendLicenseEmail(
+                customer_email,
+                'Valued Customer', 
+                order_id,
+                payhere_amount,
+                data.license_key,
+                has_cloud_dashboard === 'yes'
+              );
+              logWebhook(`Email send result: ${sent}`);
+            } else {
+              logWebhook('PHP API did not return a license_key');
             }
           }
-        } catch (err) {
-          console.error('Network error when calling PHP Admin Portal:', err);
+        } catch (err: any) {
+          logWebhook(`Network error to PHP API: ${err?.message}`);
         }
       }
     } else {
-      console.log(`Payment failed or pending. Status Code: ${status_code}`);
+      logWebhook(`Payment not complete. Status Code: ${status_code}`);
     }
 
-    // Always return 200 OK to PayHere so they know we received the webhook
     return NextResponse.json({ status: 'success' });
     
-  } catch (error) {
-    console.error('Error processing PayHere webhook:', error);
+  } catch (error: any) {
+    logWebhook(`Critical Webhook Error: ${error?.message}`);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

@@ -12,6 +12,7 @@ interface Feedback {
   rating: number;
   feedback_text: string;
   status: string;
+  image_url?: string;
   created_at: string;
 }
 
@@ -112,9 +113,20 @@ export default function AdminFeedbacks() {
               ) : (
                 feedbacks.map((fb) => (
                   <tr key={fb.id} className="hover:bg-gray-50/50">
-                    <td className="px-6 py-4">
-                      <div className="font-bold text-gray-900">{fb.reviewer_name}</div>
-                      <div className="text-sm text-gray-500">{fb.shop_name}</div>
+                    <td className="px-6 py-4 flex items-center gap-3">
+                      {fb.image_url ? (
+                        <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0 border border-gray-200">
+                          <img src={fb.image_url} alt="Logo" className="w-full h-full object-cover" />
+                        </div>
+                      ) : (
+                        <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 font-bold text-xs flex-shrink-0">
+                          {fb.shop_name.substring(0, 2).toUpperCase()}
+                        </div>
+                      )}
+                      <div>
+                        <div className="font-bold text-gray-900">{fb.reviewer_name}</div>
+                        <div className="text-sm text-gray-500">{fb.shop_name}</div>
+                      </div>
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-1">

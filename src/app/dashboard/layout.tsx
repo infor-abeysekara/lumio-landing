@@ -2,8 +2,10 @@ import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
 import { jwtVerify } from 'jose';
 import { query } from '@/lib/db';
+import { queryMySQL } from '@/lib/db-mysql';
 import Link from 'next/link';
 import LogoutButton from '@/components/LogoutButton';
+import LinkLicenseForm from '@/components/LinkLicenseForm';
 
 const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET || 'lumio_super_secret_key_2026_xyz'
@@ -25,15 +27,69 @@ export default async function DashboardLayout({
     const verified = await jwtVerify(token, JWT_SECRET);
     const userId = verified.payload.id;
 
-    // Fetch tenant's cloud access status
-    const tenantResult = await query('SELECT has_cloud_access FROM tenants WHERE id = $1', [userId]);
+    // Fetch tenant's subscription status and license key
+    const tenantResult = await query('SELECT is_subscribed, has_cloud_access, license_key, email, next_billing_date FROM tenants WHERE id = $1', [userId]);
     
     if (tenantResult.rows.length === 0) {
       // Not a valid tenant
       redirect('/login');
     }
 
-    const hasCloudAccess = tenantResult.rows[0].has_cloud_access;
+    const tenant = tenantResult.rows[0];
+    let isSubscribed = tenant.is_subscribed || tenant.has_cloud_access;
+
+    // Auto-link license by email if missing
+    if (!tenant.license_key) {
+      try {
+        const mysqlResult: any = await queryMySQL('SELECT cloud_access, license_key FROM lumnixso_lumiopos_web.licenses WHERE customer_name = ?', [tenant.email]);
+        if (mysqlResult && mysqlResult.length > 0) {
+          tenant.license_key = mysqlResult[0].license_key;
+          await query("UPDATE tenants SET license_key = $1, next_billing_date = CURRENT_DATE + INTERVAL '1 year' WHERE id = $2", [tenant.license_key, userId]);
+          tenant.next_billing_date = new Date(Date.now() + 365*24*60*60*1000).toISOString();
+        }
+      } catch (err) {
+        console.error("Auto-link failed", err);
+      }
+    }
+
+    // Sync cloud_access from MySQL licenses table
+    if (tenant.license_key) {
+      try {
+        const mysqlResult: any = await queryMySQL('SELECT status, cloud_access FROM lumnixso_lumiopos_web.licenses WHERE license_key = ?', [tenant.license_key]);
+        let shouldBeSubscribed = false;
+
+        if (mysqlResult && mysqlResult.length > 0) {
+          const row = mysqlResult[0];
+          if (row.status === 'Active' && row.cloud_access === 'Allowed') {
+             shouldBeSubscribed = true;
+          }
+        }
+        
+        // 365-Day Expiry Check
+        if (shouldBeSubscribed && tenant.next_billing_date) {
+            const billingDate = new Date(tenant.next_billing_date);
+            const now = new Date();
+            billingDate.setHours(0,0,0,0);
+            now.setHours(0,0,0,0);
+            
+            if (billingDate < now) {
+                // Expired!
+                shouldBeSubscribed = false;
+            }
+        } else if (shouldBeSubscribed && !tenant.next_billing_date) {
+            // Existing user auto-grant 365 days
+            await query("UPDATE tenants SET next_billing_date = CURRENT_DATE + INTERVAL '1 year' WHERE id = $1", [userId]);
+        }
+        
+        if (isSubscribed !== shouldBeSubscribed) {
+          isSubscribed = shouldBeSubscribed;
+          // Update PostgreSQL to keep it in sync
+          await query('UPDATE tenants SET is_subscribed = $1, has_cloud_access = $1 WHERE id = $2', [shouldBeSubscribed, userId]);
+        }
+      } catch (err) {
+        console.error("MySQL Sync Failed", err);
+      }
+    }
 
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -51,7 +107,7 @@ export default async function DashboardLayout({
           </div>
         </nav>
 
-        {!hasCloudAccess ? (
+        {!isSubscribed ? (
           <div className="flex-1 flex items-center justify-center p-4">
             <div className="bg-white max-w-lg w-full p-8 text-center rounded-3xl shadow-xl border border-gray-100 relative overflow-hidden">
               <div className="absolute top-0 left-0 w-full h-2 bg-red-500" />
@@ -64,6 +120,8 @@ export default async function DashboardLayout({
               <p className="text-gray-500 mb-8">
                 You do not have Cloud Database access enabled on your account. Your current license does not include the Cloud Dashboard feature.
               </p>
+
+              {!tenant.license_key && <LinkLicenseForm />}
               
               <div className="bg-gray-50 p-6 rounded-2xl border mb-8 text-left">
                 <h3 className="font-bold text-sm text-gray-700 mb-2 uppercase tracking-wider">Activate Cloud Dashboard</h3>

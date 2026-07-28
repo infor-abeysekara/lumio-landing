@@ -2,13 +2,14 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2 } from "lucide-react";
+import { Loader2, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 
 export default function UnifiedLogin() {
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   
@@ -89,18 +90,29 @@ export default function UnifiedLogin() {
             />
           </div>
           <div>
-            <div className="flex justify-between items-center mb-2">
+            <div className="mb-2">
               <label className="block text-sm font-bold text-gray-700 uppercase tracking-wide text-xs">Password</label>
-              <a href="#" className="text-xs font-bold text-brand-blue hover:underline">Forgot?</a>
             </div>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full border-2 border-gray-100 p-4 rounded-xl outline-none focus:border-brand-blue transition-colors font-medium bg-gray-50 focus:bg-white"
-              required
-              placeholder="••••••••"
-            />
+            <div className="relative">
+              <input
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full border-2 border-gray-100 p-4 pr-12 rounded-xl outline-none focus:border-brand-blue transition-colors font-medium bg-gray-50 focus:bg-white"
+                required
+                placeholder="••••••••"
+              />
+              <button 
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+              >
+                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+              </button>
+            </div>
+            <div className="flex justify-end mt-2">
+              <Link href="/forgot-password" className="text-xs font-bold text-brand-blue hover:underline">Forgot Password?</Link>
+            </div>
           </div>
           
           <button

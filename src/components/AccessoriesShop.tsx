@@ -76,13 +76,9 @@ export default function AccessoriesShop() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {filteredProducts.map((product, i) => (
-              <motion.div
-                key={product.id}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.05 }}
-                className="bg-white rounded-[2rem] p-5 hover:shadow-[0_20px_50px_-12px_rgba(0,0,0,0.1)] hover:-translate-y-2 transition-all duration-500 group flex flex-col h-full border border-gray-100 relative overflow-hidden"
+              <motion.div 
+                key={product.id} 
+                className="bg-gray-50/50 hover:bg-white rounded-[2rem] border border-gray-100 p-5 md:p-6 flex flex-col hover:border-[#00a3ff]/30 transition-all duration-300 hover:shadow-2xl hover:shadow-[#00a3ff]/10 group"
               >
                 {/* Subtle background glow effect on hover */}
                 <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-brand-blue/5 rounded-full blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
@@ -99,26 +95,26 @@ export default function AccessoriesShop() {
                 </div>
                 
                 <div className="flex-1 flex flex-col relative z-10">
-                  <span className="text-[10px] font-black text-brand-blue uppercase tracking-widest mb-2 opacity-80">
+                  <span className="text-[11px] font-black text-[#00a3ff] uppercase tracking-widest mb-3 opacity-90">
                     {product.category}
                   </span>
-                  <h3 className="font-bold text-brand-dark text-lg leading-tight mb-2 line-clamp-2 group-hover:text-brand-blue transition-colors">
+                  <h3 className="font-sans font-bold text-brand-dark text-lg uppercase leading-snug mb-3 line-clamp-2 group-hover:text-[#00a3ff] transition-colors">
                     {product.name}
                   </h3>
-                  <p className="text-sm text-gray-500 mb-6 line-clamp-2 leading-relaxed">
+                  <p className="text-sm text-gray-500 mb-6 line-clamp-3 leading-relaxed">
                     {product.description}
                   </p>
                   
-                  <div className="mt-auto flex flex-col gap-4">
+                  <div className="mt-auto flex flex-col gap-5">
                     <div className="flex items-center justify-between">
-                      <span className="font-black text-2xl text-brand-dark tracking-tight">
-                        <span className="text-sm text-gray-400 font-bold mr-1">Rs.</span>
+                      <span className="font-black text-2xl text-[#00a3ff] tracking-tight">
+                        <span className="text-lg font-bold mr-1">Rs.</span>
                         {Number(product.price).toLocaleString()}
                       </span>
                     </div>
 
-                    <div className="flex gap-2">
-                      <Link href={`/shop/${product.id}`} className="flex-[0.4] py-3 rounded-xl text-sm font-bold text-gray-600 bg-gray-50 hover:bg-gray-100 hover:text-brand-dark transition-all flex items-center justify-center gap-1 border border-gray-200">
+                    <div className="flex gap-3">
+                      <Link href={`/shop/${product.id}`} className="flex-[0.45] py-3 rounded-xl text-sm font-bold text-[#00a3ff] bg-white hover:bg-[#00a3ff] hover:text-white transition-all flex items-center justify-center gap-1.5 border-2 border-[#00a3ff]">
                         <Info size={16} /> Details
                       </Link>
                       <button 
@@ -130,9 +126,9 @@ export default function AccessoriesShop() {
                           type: 'hardware',
                           image: product.image_url
                         })}
-                        className="flex-1 bg-brand-dark text-white font-bold py-3 rounded-xl hover:bg-brand-blue transition-colors shadow-md hover:shadow-xl shadow-brand-blue/20 flex items-center justify-center gap-2 text-sm"
+                        className="flex-[0.55] bg-[#00a3ff] text-white font-bold py-3 rounded-xl hover:bg-[#0088cc] transition-colors shadow-lg hover:shadow-xl shadow-[#00a3ff]/20 flex items-center justify-center gap-2 text-sm"
                       >
-                        <ShoppingCart size={16} /> Add to Cart
+                        <ShoppingCart size={16} /> Add
                       </button>
                     </div>
                   </div>

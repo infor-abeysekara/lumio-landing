@@ -10,24 +10,51 @@ export default function PublicFeedbackPage() {
     rating: 5,
     feedback_text: ""
   });
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    } else {
+      setImageFile(null);
+      setImagePreview(null);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setMessage(null);
 
+    const submitData = new FormData();
+    submitData.append('reviewer_name', formData.reviewer_name);
+    submitData.append('shop_name', formData.shop_name);
+    submitData.append('rating', formData.rating.toString());
+    submitData.append('feedback_text', formData.feedback_text);
+    if (imageFile) {
+      submitData.append('image', imageFile);
+    }
+
     try {
       const res = await fetch("/api/feedbacks", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: submitData,
       });
       const data = await res.json();
       if (data.success) {
         setMessage({ type: 'success', text: "Thank you! Your feedback has been submitted successfully." });
         setFormData({ reviewer_name: "", shop_name: "", rating: 5, feedback_text: "" });
+        setImageFile(null);
+        setImagePreview(null);
       } else {
         setMessage({ type: 'error', text: data.error || "Failed to submit feedback." });
       }
@@ -75,6 +102,23 @@ export default function PublicFeedbackPage() {
                 value={formData.shop_name}
                 onChange={(e) => setFormData({...formData, shop_name: e.target.value})}
                 placeholder="Doe's Grocery"
+              />
+            </div>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Shop Logo / Your Photo (Optional)</label>
+            <div className="flex items-center gap-4">
+              {imagePreview && (
+                <div className="w-16 h-16 rounded-full overflow-hidden border border-gray-200 shadow-sm flex-shrink-0">
+                  <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+                </div>
+              )}
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleImageChange}
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-brand-blue/50 focus:border-brand-blue file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-brand-blue/10 file:text-brand-blue hover:file:bg-brand-blue/20"
               />
             </div>
           </div>

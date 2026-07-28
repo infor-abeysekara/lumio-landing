@@ -1,18 +1,31 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Check, X, Plus } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 
 export default function Pricing() {
   const { addToCart } = useCart();
+  const [softwarePrice, setSoftwarePrice] = useState(65000);
+
+  useEffect(() => {
+    fetch("/api/settings")
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.settings?.software_price) {
+          setSoftwarePrice(Number(data.settings.software_price));
+        }
+      })
+      .catch(console.error);
+  }, []);
 
   const handleBuyNow = () => {
     // Add the main software license
     addToCart({
       id: "lumio-ent-001",
       name: "Lumio POS Enterprise License",
-      price: 65000,
+      price: softwarePrice,
       quantity: 1,
       type: "software",
     });
@@ -47,7 +60,7 @@ export default function Pricing() {
     {
       name: "Lumio POS Enterprise",
       desc: "Complete POS solution with all premium features.",
-      price: "Rs. 65,000",
+      price: `Rs. ${softwarePrice.toLocaleString()}`,
       subtext: "One-time payment",
       features: [
         { text: "Full POS System Access", included: true },

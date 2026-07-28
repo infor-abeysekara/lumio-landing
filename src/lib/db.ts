@@ -1,8 +1,9 @@
-import { Pool } from 'pg';
+// Bypass Turbopack hash bug by requiring 'pg' dynamically
+const { Pool } = eval('require("pg")');
 
 const pool = new Pool({
   user: 'lumnixso_lumiopos_landing',
-  host: 'localhost',
+  host: '127.0.0.1', // Force TCP to bypass cPanel peer authentication
   database: 'lumnixso_next_lumiopos_landing',
   password: 'lumnixso_lumiopos_landing', // ඔයා Install කරද්දි දුන්න Password එක මෙතන දාන්න
   port: 5432,

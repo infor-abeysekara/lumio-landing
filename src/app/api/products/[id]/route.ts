@@ -21,3 +21,20 @@ export async function GET(
     return NextResponse.json({ error: 'Failed to fetch accessory details' }, { status: 500 });
   }
 }
+
+export async function DELETE(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const resolvedParams = await params;
+    const { id } = resolvedParams;
+    
+    await query('DELETE FROM accessories WHERE id = $1', [id]);
+    
+    return NextResponse.json({ success: true, message: 'Deleted successfully' });
+  } catch (error: any) {
+    console.error(error);
+    return NextResponse.json({ error: 'Failed to delete accessory' }, { status: 500 });
+  }
+}

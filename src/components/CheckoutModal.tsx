@@ -1,13 +1,14 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Loader2, Cpu, MapPin, Phone, User, Mail } from "lucide-react";
-import { useState, FormEvent, useEffect } from "react";
+import { X, Loader2, Cpu, MapPin, Phone, User, Mail, Eye, EyeOff } from "lucide-react";
+import { useState, FormEvent, useEffect, useRef, useMemo } from "react";
 import { useCart } from "@/context/CartContext";
 
 export default function CheckoutModal({ isOpen, onClose, mode = 'checkout' }: { isOpen: boolean, onClose: () => void, mode?: 'checkout' | 'quotation' }) {
   const { items, totalAmount, clearCart } = useCart();
   const [isCheckingOut, setIsCheckingOut] = useState(false);
+  const [paymentGatewayEnabled, setPaymentGatewayEnabled] = useState(true);
   
   const [processorId, setProcessorId] = useState("");
   const [address, setAddress] = useState("");
@@ -18,6 +19,14 @@ export default function CheckoutModal({ isOpen, onClose, mode = 'checkout' }: { 
   const [shopName, setShopName] = useState("");
   const [nic, setNic] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+
+  // Modals for errors/conflicts
+  const [errorModalOpen, setErrorModalOpen] = useState(false);
+  const [errorModalMessage, setErrorModalMessage] = useState("");
+  const [conflictModalOpen, setConflictModalOpen] = useState(false);
+  
+  const checkoutFormRef = useRef<HTMLFormElement | null>(null);
 
   const hasSoftware = items.some(item => item.type === 'software');
   const hasHardware = items.some(item => item.type === 'hardware');
@@ -27,7 +36,24 @@ export default function CheckoutModal({ isOpen, onClose, mode = 'checkout' }: { 
     return items.map(i => `${i.name} (x${i.quantity})`).join(', ');
   };
 
-  const orderId = hasSoftware ? "LUMIO-ENT-001" : `LUMIO-HW-${Math.floor(Math.random() * 1000000)}`;
+  useEffect(() => {
+    if (isOpen) {
+      fetch('/api/settings')
+        .then(res => res.json())
+        .then(data => {
+          if (data.settings && data.settings.payment_gateway_enabled === 'false') {
+            setPaymentGatewayEnabled(false);
+          } else {
+            setPaymentGatewayEnabled(true);
+          }
+        })
+        .catch(err => console.error("Error fetching settings:", err));
+    }
+  }, [isOpen]);
+
+  const orderId = useMemo(() => {
+    return hasSoftware ? `LUMIO-SW-${Math.floor(Math.random() * 1000000)}` : `LUMIO-HW-${Math.floor(Math.random() * 1000000)}`;
+  }, [hasSoftware]);
 
   const handlePaymentSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -295,9 +321,10 @@ export default function CheckoutModal({ isOpen, onClose, mode = 'checkout' }: { 
       if (mode === 'checkout') {
         const nameParts = name.trim().split(' ');
         const firstName = nameParts[0];
-        const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : 'Unknown';
+        const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
 
         const formData = new FormData();
+        formData.append('order_id', orderId);
         formData.append('first_name', firstName);
         formData.append('last_name', lastName);
         formData.append('shop_name', shopName);
@@ -307,28 +334,46 @@ export default function CheckoutModal({ isOpen, onClose, mode = 'checkout' }: { 
         formData.append('address', address || 'N/A');
         formData.append('password', password);
 
-        const regRes = await fetch('/api/auth/register', {
+        const regRes = await fetch('/api/auth/pre-register', {
           method: 'POST',
           body: formData,
         });
 
         if (!regRes.ok) {
+          let errorMsg = "Failed to save pre-registration. Please check your details.";
+          try {
+            const data = await regRes.json();
+            if (data.error) errorMsg = data.error;
+          } catch (e) {}
+          
           if (regRes.status === 409) {
-             alert('An account with this Email or NIC already exists. Please use a different email or login first.');
+             setConflictModalOpen(true);
           } else {
-             alert('Failed to create an account. Please check your details.');
+             setErrorModalMessage(errorMsg);
+             setErrorModalOpen(true);
+             setIsCheckingOut(false);
           }
-          setIsCheckingOut(false);
-          return;
+          return; // Stop here. For conflict, wait for user to click "Proceed".
         }
       }
 
+      await proceedToPayment(form);
+    } catch (error) {
+      console.error("Error generating hash", error);
+      setErrorModalMessage("Payment initialization failed. Please try again.");
+      setErrorModalOpen(true);
+      setIsCheckingOut(false);
+    }
+  };
+
+  const proceedToPayment = async (form: HTMLFormElement) => {
+    try {
       const res = await fetch('/api/payhere/hash', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           order_id: orderId, 
-          amount: (10000).toFixed(2), // DEV ONLY: Override amount to 10000 for testing 
+          amount: totalAmount.toFixed(2),
           currency: "LKR" 
         })
       });
@@ -344,14 +389,28 @@ export default function CheckoutModal({ isOpen, onClose, mode = 'checkout' }: { 
           form.appendChild(hashInput);
         }
         hashInput.value = data.hash;
+
+        let merchantInput = form.querySelector('input[name="merchant_id"]') as HTMLInputElement;
+        if (merchantInput && data.merchant_id) {
+          merchantInput.value = data.merchant_id;
+          // Set action URL based on Sandbox or Live (Sandbox IDs start with 1)
+          if (data.merchant_id.toString().startsWith('1')) {
+            form.action = "https://sandbox.payhere.lk/pay/checkout";
+          } else {
+            form.action = "https://www.payhere.lk/pay/checkout";
+          }
+        }
+
         form.submit();
       } else {
-        alert("Payment initialization failed. Please try again.");
+        setErrorModalMessage("Payment initialization failed. Please try again.");
+        setErrorModalOpen(true);
         setIsCheckingOut(false);
       }
     } catch (error) {
       console.error("Error generating hash", error);
-      alert("Payment initialization failed. Please try again.");
+      setErrorModalMessage("Payment initialization failed. Please try again.");
+      setErrorModalOpen(true);
       setIsCheckingOut(false);
     }
   };
@@ -378,22 +437,51 @@ export default function CheckoutModal({ isOpen, onClose, mode = 'checkout' }: { 
               </button>
             </div>
             
-            <form onSubmit={handlePaymentSubmit} action={mode === 'checkout' ? "https://sandbox.payhere.lk/pay/checkout" : undefined} method={mode === 'checkout' ? "post" : undefined}>
-              {/* PayHere Required Fields - only include if checkout mode */}
+            {mode === 'checkout' && !paymentGatewayEnabled ? (
+              <div className="bg-orange-50 border border-orange-200 rounded-2xl p-6 text-center">
+                <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <span className="text-2xl">🏦</span>
+                </div>
+                <h4 className="text-xl font-bold text-orange-800 mb-2">Online Payments Disabled</h4>
+                <p className="text-orange-700 font-medium mb-4">
+                  We are currently accepting payments via Bank Transfers only. Our online payment gateway is temporarily disabled while we verify our business registration.
+                </p>
+                <div className="bg-white rounded-xl p-4 border border-orange-100 text-left mb-6 shadow-sm">
+                  <p className="text-sm text-gray-500 mb-1">Total Amount Due:</p>
+                  <p className="text-2xl font-black text-brand-dark mb-4">LKR {totalAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}</p>
+                  
+                  <p className="text-sm font-bold text-gray-700">Bank Details:</p>
+                  <p className="text-sm text-gray-600">Bank: Commercial Bank</p>
+                  <p className="text-sm text-gray-600">Account No: 8009124450</p>
+                  <p className="text-sm text-gray-600">Branch: Matara</p>
+                </div>
+                <p className="text-sm text-orange-600 font-bold mb-4">
+                  Please WhatsApp the bank transfer slip to +94 74 255 6665 to process your order.
+                </p>
+                <button 
+                  onClick={onClose}
+                  className="w-full py-4 rounded-xl font-bold text-orange-900 bg-orange-200 hover:bg-orange-300 transition-colors"
+                >
+                  Close
+                </button>
+              </div>
+            ) : (
+            <form ref={checkoutFormRef} onSubmit={handlePaymentSubmit} method={mode === 'checkout' ? "post" : undefined}>
+              {/* PayHere Hidden Fields */}
               {mode === 'checkout' && (
                 <>
-                  <input type="hidden" name="merchant_id" value="1231869" />
-                  <input type="hidden" name="return_url" value="https://lumiopos.store" />
-                  <input type="hidden" name="cancel_url" value="https://lumiopos.store" />
-                  <input type="hidden" name="notify_url" value="https://lumiopos.store/api/notify" />  
+                  <input type="hidden" name="merchant_id" value="" />
+                  <input type="hidden" name="return_url" value={`${typeof window !== 'undefined' ? window.location.origin : 'https://lumiopos.store'}?payment=success`} />
+                  <input type="hidden" name="cancel_url" value={`${typeof window !== 'undefined' ? window.location.origin : 'https://lumiopos.store'}`} />
+                  <input type="hidden" name="notify_url" value={`https://lumiopos.store/api/notify`} />  {/* Notify URL must be accessible from internet, so keep it hardcoded or use env var */}
                   <input type="hidden" name="order_id" value={orderId} />
                   <input type="hidden" name="items" value={generateOrderDescription()} />
                   <input type="hidden" name="currency" value="LKR" />
-                  <input type="hidden" name="amount" value={(10000).toFixed(2)} />  
+                  <input type="hidden" name="amount" value={totalAmount.toFixed(2)} />  
                   <input type="hidden" name="city" value="Colombo" />
                   <input type="hidden" name="country" value="Sri Lanka" />
                   {!hasHardware && <input type="hidden" name="address" value="N/A" />}
-                  <input type="hidden" name="custom_1" value={buyingFullSet ? "PRE-INSTALLED" : processorId} />
+                  <input type="hidden" name="custom_1" value={`${buyingFullSet ? "PRE-INSTALLED" : processorId}|${email}`} />
                   <input type="hidden" name="custom_2" value={hasCloudDashboard ? "yes" : "no"} />
                 </>
               )}
@@ -410,7 +498,7 @@ export default function CheckoutModal({ isOpen, onClose, mode = 'checkout' }: { 
 
                 {mode === 'checkout' && (
                   <>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <label className="text-sm font-bold text-gray-700 block mb-1">Shop/Business Name</label>
                         <input type="text" required value={shopName} onChange={(e) => setShopName(e.target.value)} placeholder="My Shop" className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-brand-blue/50 focus:border-brand-blue transition-all" />
@@ -434,7 +522,16 @@ export default function CheckoutModal({ isOpen, onClose, mode = 'checkout' }: { 
                 {mode === 'checkout' && (
                   <div>
                     <label className="text-sm font-bold text-gray-700 block mb-1">Account Password (To login later)</label>
-                    <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-brand-blue/50 focus:border-brand-blue transition-all" />
+                    <div className="relative">
+                      <input type={showPassword ? "text" : "password"} required value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" className="w-full px-4 py-3 pr-10 rounded-xl border border-gray-200 focus:ring-2 focus:ring-brand-blue/50 focus:border-brand-blue transition-all" />
+                      <button 
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                      >
+                        {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                      </button>
+                    </div>
                   </div>
                 )}
 
@@ -510,6 +607,7 @@ export default function CheckoutModal({ isOpen, onClose, mode = 'checkout' }: { 
                 </button>
               </div>
             </form>
+            )}
           </motion.div>
 
           {/* Hidden Printable Area */}
@@ -619,6 +717,77 @@ export default function CheckoutModal({ isOpen, onClose, mode = 'checkout' }: { 
           </div>
         </div>
       )}
+
+      {/* Error Modal */}
+      <AnimatePresence>
+        {errorModalOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-gray-900/60 backdrop-blur-sm px-4">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="bg-white rounded-3xl p-8 max-w-sm w-full shadow-2xl text-center"
+            >
+              <div className="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center mx-auto mb-6">
+                <X size={32} />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">Notice</h3>
+              <p className="text-gray-500 mb-8">{errorModalMessage}</p>
+              <button 
+                onClick={() => setErrorModalOpen(false)}
+                className="w-full py-3 px-4 rounded-xl font-bold text-white bg-brand-blue hover:bg-blue-700 transition-colors"
+              >
+                Okay
+              </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Conflict Modal for Returning Customers */}
+      <AnimatePresence>
+        {conflictModalOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-gray-900/60 backdrop-blur-sm px-4">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl text-center relative"
+            >
+              <div className="absolute top-0 right-0 transform translate-x-2 -translate-y-2 bg-brand-blue text-white text-xs font-bold px-3 py-1 rounded-full shadow-md animate-pulse">
+                Welcome Back!
+              </div>
+              <div className="w-16 h-16 bg-blue-100 text-brand-blue rounded-full flex items-center justify-center mx-auto mb-6">
+                <User size={32} />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">Account Already Exists</h3>
+              <p className="text-gray-500 mb-6 text-sm leading-relaxed">
+                We noticed that an account with this Email or NIC already exists. 
+                <br/><br/>
+                You can proceed with this purchase, and it will be linked to your existing account. No need to register again!
+              </p>
+              <div className="flex gap-3">
+                <button 
+                  onClick={() => { setConflictModalOpen(false); setIsCheckingOut(false); }}
+                  className="flex-1 py-3 px-4 rounded-xl font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={() => {
+                      setConflictModalOpen(false);
+                      setIsCheckingOut(true);
+                      if (checkoutFormRef.current) proceedToPayment(checkoutFormRef.current);
+                  }}
+                  className="flex-1 py-3 px-4 rounded-xl font-bold text-white bg-brand-blue hover:bg-blue-700 transition-colors"
+                >
+                  Proceed to Pay
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </AnimatePresence>
   );
 }

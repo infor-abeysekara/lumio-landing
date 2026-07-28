@@ -35,6 +35,36 @@ export async function GET() {
         plan VARCHAR(100) DEFAULT 'FREE',
         addons JSONB,
         next_billing_date DATE,
+        bank_slip_url TEXT,
+        activation_status VARCHAR(50) DEFAULT 'NONE',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    await query(`CREATE INDEX IF NOT EXISTS idx_tenants_email ON tenants(email)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_tenants_status ON tenants(status)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_tenants_license_key ON tenants(license_key)`);
+
+    // Add columns if they don't exist (for existing tables)
+    try {
+      await query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS bank_slip_url TEXT`);
+      await query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS activation_status VARCHAR(50) DEFAULT 'NONE'`);
+    } catch(e: any) {
+      if (e.code !== '42701') console.error('Error adding columns to tenants:', e.message);
+    }
+
+    // 2.5 Pending Registrations Table (For PayHere Deferred Account Creation)
+    await query(`
+      CREATE TABLE IF NOT EXISTS pending_registrations (
+        order_id VARCHAR(100) PRIMARY KEY,
+        first_name VARCHAR(100) NOT NULL,
+        last_name VARCHAR(100) NOT NULL,
+        store_name VARCHAR(255) NOT NULL,
+        nic VARCHAR(20) NOT NULL,
+        email VARCHAR(255) NOT NULL,
+        phone VARCHAR(50) NOT NULL,
+        address TEXT NOT NULL,
+        password VARCHAR(255) NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
@@ -79,13 +109,27 @@ export async function GET() {
       )
     `);
     
-    // Add is_approved column safely
+    // Add is_approved and long_description columns safely
     try {
-      await query(`ALTER TABLE accessories ADD COLUMN is_approved BOOLEAN DEFAULT true`);
+      await query(`ALTER TABLE accessories ADD COLUMN IF NOT EXISTS is_approved BOOLEAN DEFAULT true`);
+      await query(`ALTER TABLE accessories ADD COLUMN IF NOT EXISTS long_description TEXT`);
     } catch (e: any) {
       // Column might already exist, ignore error (code 42701)
-      if (e.code !== '42701') console.error('Error adding is_approved:', e.message);
+      if (e.code !== '42701') console.error('Error adding columns to accessories:', e.message);
     }
+
+    // 6. Feedbacks Table
+    await query(`
+      CREATE TABLE IF NOT EXISTS feedbacks (
+        id SERIAL PRIMARY KEY,
+        reviewer_name VARCHAR(255) NOT NULL,
+        shop_name VARCHAR(255) NOT NULL,
+        rating INTEGER NOT NULL,
+        feedback_text TEXT NOT NULL,
+        status VARCHAR(50) DEFAULT 'PENDING',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
 
     // Insert or Update Default Super Admin
     const bcrypt = require('bcryptjs');
@@ -102,16 +146,16 @@ export async function GET() {
       `, [hashedPassword]);
     }
 
-    // Insert default settings
-    const settingsCheck = await query("SELECT count(*) FROM settings");
-    if (parseInt(settingsCheck.rows[0].count) === 0) {
-      await query(`
-        INSERT INTO settings (setting_key, setting_value) VALUES 
-        ('payhere_merchant_id', '1231869'),
-        ('payhere_secret', 'Mjk2NTU4ODk5NTI2NTY1ODc5MzgxMjM4OTkzMjI4NjAwNzUxNzA4'),
-        ('software_price', '65000')
-      `);
-    }
+    // Insert or update default settings
+    await query(`
+      INSERT INTO settings (setting_key, setting_value) VALUES 
+      ('payhere_merchant_id', '1231869'),
+      ('payhere_secret', 'NDA1ODE1MzQ3MTc1MzE2OTY3MzE0MDk0NTQ5NDgwMjI3MDkxOA=='),
+      ('software_price', '65000'),
+      ('payment_gateway_enabled', 'true')
+      ON CONFLICT (setting_key) DO UPDATE 
+      SET setting_value = EXCLUDED.setting_value
+    `);
 
     // Insert some default accessories if table is empty
     const accCheck = await query('SELECT count(*) FROM accessories');

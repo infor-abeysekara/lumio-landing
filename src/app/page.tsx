@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import Navbar from "@/components/Navbar";
 import Hero from "@/components/Hero";
 import ClientFeedbacks from "@/components/ClientFeedbacks";
@@ -8,11 +9,14 @@ import Pricing from "@/components/Pricing";
 import AccessoriesShop from "@/components/AccessoriesShop";
 import Contact from '@/components/Contact';
 import Footer from "@/components/Footer";
-import RequestQuote from "@/components/RequestQuote";
+import PaymentSuccessHandler from "@/components/PaymentSuccessHandler";
 
 export default function Home() {
   return (
     <main className="min-h-screen bg-white">
+      <Suspense fallback={null}>
+        <PaymentSuccessHandler />
+      </Suspense>
       <Navbar />
       <Hero />
       <ClientFeedbacks />
